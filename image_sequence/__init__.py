@@ -22,21 +22,25 @@ except ImportError:
 
 __version__ = "0.1.0"
 
-
 _RE_FILENAME = re.compile(
-    r"(?P<name>[\w\-\[\]]+)"
-    r"(\.((?P<frame>\d+)|"
-    r"(?P<token>%0\d+d)|"
-    r"(?P<padding>[#@]+)))?"
-    r"(?P<ext>\.\w+)$"
-)
-
-_RE_FRAME_TOKEN = re.compile(
-    r"%0(?P<padding>\d+)d"
+    r"(?P<name>[\w\-\[\]]+)"   # File name.
+    r"(\.((?P<frame>\d+)|"     # Optionaly frame number.
+    r"(?:%0(?P<token>\d+)d)|"  # Optionaly frame token e.g %04d
+    r"(?P<padding>[#@]+)))?"   # Optionaly padding e.g (@@ or ###
+    r"(?P<ext>\.\w+)$"         # File extension.
 )
 
 
 class ImageSequence(object):
+    """Class for representing a file sequence.
+
+    Examples:
+        >>>from image_sequence import ImageSequence
+        >>>seq = ImageSequence("/mock/path/file_name.1001.exr")
+        >>>seq.find_frames_on_disk()
+        True
+
+    """
     def __init__(self, path):
         super(ImageSequence, self).__init__()
         self._pattern = "{name}{frame}{ext}"
@@ -52,7 +56,7 @@ class ImageSequence(object):
             self.frames.append(int(self._data["frame"]))
             self.padding = len(self._data["frame"])
         elif self._data.get("token"):
-            self.padding = int(_RE_FRAME_TOKEN.search(self._data["token"]).group("padding"))
+            self.padding = int(self._data["token"])
         elif self._data.get("padding"):
             self.padding = len(self._data.get("padding"))
 
@@ -119,6 +123,9 @@ class ImageSequence(object):
         if not self.dirname:
             return False
 
+        if not self._data.get("frame"):
+            return False
+
         for path in scandir(self.dirname):
             if not path.is_file():
                 continue
@@ -132,5 +139,14 @@ class ImageSequence(object):
     def __eq__(self, other):
         return self.path == other.path
 
+    def __iter__(self):
+        return iter(self.get_paths())
+
+    def __len__(self):
+        return len(self.frames)
+
     def __repr__(self):
+        return self.path
+
+    def __str__(self):
         return self.path
