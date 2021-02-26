@@ -13,6 +13,10 @@
 # limitations under the License.
 from setuptools import setup
 import image_sequence
+import sys
+
+
+REQUIRES = ["scandir"] if sys.version_info < (3, 4) else []
 
 setup(
     name="image_sequence",
@@ -24,4 +28,5 @@ setup(
     author_email="info@maxwiklund.com",
     description="Library for representing file sequences.",
     py_modules=["image_sequence"],
+    install_requires=REQUIRES,
 )
