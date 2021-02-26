@@ -205,3 +205,37 @@ class TestImageSequence(unittest.TestCase):
             expected_result,
             seq.get_paths()
         )
+
+    def test_format_with_padding_style(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
+        expected_result1 = "/mock/file_name.###.exr"
+        expected_result2 = "/mock/file_name.@@@.exr"
+        expected_result3 = "/mock/file_name.*.exr"
+
+        self.assertEqual(
+            expected_result1, seq.format_with_padding_style("#")
+        )
+
+        self.assertEqual(
+            expected_result2, seq.format_with_padding_style("@")
+        )
+
+        self.assertEqual(
+            expected_result3, seq.format_with_padding_style("*", padding=1)
+        )
+
+    def test_name(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
+        seq.name = "new_file_name"
+
+        expected_result_path = "/mock/new_file_name.%03d.exr"
+        expected_result_name = "new_file_name"
+
+        self.assertEqual(
+            expected_result_name,
+            seq.name
+        )
+        self.assertEqual(
+            expected_result_path,
+            seq.path
+        )
