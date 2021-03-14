@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (C) 2021  Max Wiklund
 #
 # Licensed under the Apache License, Version 2.0 (the “License”);
@@ -31,6 +32,23 @@ _RE_FILENAME = re.compile(
 )
 
 
+def find_sequence_on_disk(path):
+    """Create ImageSequence object and find coresponding frames.
+
+    Args:
+        path (str): File path.
+
+    Returns:
+        <ImageSequence> or None: Image sequence object with frames.
+
+    """
+    if _RE_FILENAME.match(os.path.basename(path)):
+        seq = ImageSequence(path)
+        seq.find_frames_on_disk()
+        return seq
+    return None
+
+
 class ImageSequence(object):
     """Class for representing a file sequence.
 
@@ -41,12 +59,15 @@ class ImageSequence(object):
         True
 
     """
-    def __init__(self, path):
+    BOOST_FORMAT_STYLE = "%"
+
+    def __init__(self, path, padding_style=BOOST_FORMAT_STYLE):
         super(ImageSequence, self).__init__()
         self._pattern = "{name}{frame}{ext}"
         self._frames = []
         self._up_to_date = True
         self._padding = 0
+        self._padding_style = padding_style
         self.dirname = os.path.dirname(path)
 
         match = _RE_FILENAME.match(os.path.basename(path))
@@ -67,7 +88,25 @@ class ImageSequence(object):
     @padding.setter
     def padding(self, value):
         self._padding = value
-        self._data["frame"] = ".%0{}d".format(self._padding)
+        if value < 1:
+            self._data["frame"] = ""
+        else:
+            self._create_padding_format()
+
+    @property
+    def padding_style(self):
+        return self._padding_style
+
+    @padding_style.setter
+    def padding_style(self, value):
+        self._padding_style = value
+        self._create_padding_format()
+
+    def _create_padding_format(self):
+        if self.padding_style == ImageSequence.BOOST_FORMAT_STYLE:
+            self._data["frame"] = ".%0{}d".format(self._padding)
+        else:
+            self._data["frame"] = "." + self.padding_style * self.padding
 
     def set_format(self, pattern):
         self._pattern = pattern
@@ -112,19 +151,23 @@ class ImageSequence(object):
 
     def merge(self, other):
         self.frames += other.frames
+        if other.padding > self.padding:
+            self.padding = other.padding
         self._up_to_date = False
 
     def get_paths(self, offset=0):
+        path = self._get_path_for_formatting()
         if not self.frames:
-            return [self.path]
+            return [path]
 
-        return [self.path % (frame + offset) for frame in self.frames]
+        return [path % (frame + offset) for frame in self.frames]
 
     def eval_at_frame(self, frame):
+        path = self._get_path_for_formatting()
         if not self.padding:
-            return self.path
+            return path
 
-        return self.path % frame
+        return path % frame
 
     def format_with_padding_style(self, style, padding=0):
         """Format path with custom padding type.
@@ -141,10 +184,16 @@ class ImageSequence(object):
             >>>seq.format_with_padding_style("@", padding=2)
             '/mock/path/file.@@.exr
 
+        Returns:
+            str: Formated file path.
+
         """
         data = dict(self._data)
         data["frame"] = "." + style * (padding if padding else self.padding)
         return os.path.join(self.dirname, self._pattern.format(**data))
+
+    def set_custom_frame_token(self, token):
+        self._data["frame"] = "." + token if token else ""
 
     def find_frames_on_disk(self):
         """bool: True if frames found else False."""
@@ -158,14 +207,35 @@ class ImageSequence(object):
             if not path.is_file():
                 continue
 
+            # Filter out file names that we can't parse.
+            if not _RE_FILENAME.match(path.name):
+                continue
+
             element = ImageSequence(path.path)
             if self == element:
                 self.merge(element)
 
         return True
 
+    def start(self):
+        return self.frames[0] if self.frames else 0
+
+    def end(self):
+        return self.frames[-1] if self.frames else 0
+
+    def abstract_path_representation(self):
+        """str: File path without frame padding."""
+        return self.path.replace(self._data["frame"], ".$FRAME")
+
+    def _get_path_for_formatting(self):
+        """str: """
+        data = dict(self._data)
+        if data.get("frame"):
+            data["frame"] = ".%0{}d".format(self.padding)
+        return os.path.join(self.dirname, self._pattern.format(**data))
+
     def __eq__(self, other):
-        return self.path == other.path
+        return self.abstract_path_representation() == other.abstract_path_representation()
 
     def __ne__(self, other):
         return not self == other
@@ -183,7 +253,7 @@ class ImageSequence(object):
         return self.path
 
     def __copy__(self):
-        obj = type(self)(self.path)
+        obj = type(self)(self.path, padding_style=self.padding_style)
         obj._padding = self.padding
         obj.frames = self._frames
         obj._pattern = self._pattern

@@ -4,7 +4,10 @@ Library for representing file sequences.
 ## Usage
 
 ```python
-from image_sequence import ImageSequence
+from image_sequence import ImageSequence, find_sequence_on_disk
+
+
+seq = find_sequence_on_disk("/mock/path/file.@@@.exr")
 
 
 # Ways to set frame padding.
@@ -41,6 +44,16 @@ seq.get_paths()
 
 seq.eval_at_frame(9999)
 "/mock/path/file.9999.exr"
+
+
+# Does only generate a string without affecting the object.
+print(seq.format_with_padding_style("@"))
+"/mock/path/file.@@@@.exr"
+
+
+seq.set_custom_frame_token("<UDIM>)")
+print(seq.path)
+
 
 
 ```

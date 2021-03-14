@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (C) 2021  Max Wiklund
 #
 # Licensed under the Apache License, Version 2.0 (the “License”);
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import unittest
 import os
 
@@ -54,15 +56,19 @@ class TestImageSequence(unittest.TestCase):
         )
 
     def test_padding030(self):
-        seq = image_sequence.ImageSequence("/mock/path/file_name.#####.exr")
+        seq = image_sequence.ImageSequence("/mock/path/file_name.#####.exr", padding_style="#")
         expected_result = 5
         self.assertEqual(
             expected_result, seq.padding
         )
-        self.assertEqual(
-            "/mock/path/file_name.01001.exr",
-            seq.eval_at_frame(1001)
-        )
+        self.assertEqual("/mock/path/file_name.01001.exr", seq.eval_at_frame(1001))
+
+    def test_no_padding(self):
+        expected_result = "/mock/path/file_name.exr"
+        seq = image_sequence.ImageSequence("/mock/path/file_name.#####.exr")
+        seq.padding = 0
+
+        self.assertEqual(expected_result, seq.path)
 
     def test_equals(self):
         a = image_sequence.ImageSequence("/mock/path/file_name.101.exr")
@@ -76,7 +82,7 @@ class TestImageSequence(unittest.TestCase):
 
     def test_not_equals010(self):
         a = image_sequence.ImageSequence("/mock/path/file_name.1101.exr")
-        b = image_sequence.ImageSequence("/mock/path/file_name.222.exr")
+        b = image_sequence.ImageSequence("/mock/path/file_name.exr")
         expected_result = False
 
         self.assertEqual(
@@ -206,6 +212,27 @@ class TestImageSequence(unittest.TestCase):
             seq.get_paths()
         )
 
+    def test_set_padding_style010(self):
+        expected_result = "/mock/file.####.rat"
+
+        seq = image_sequence.ImageSequence("/mock/file.4444.rat", padding_style="#")
+        self.assertEqual(expected_result, seq.path)
+
+    def test_set_padding_style020(self):
+        expected_result = "/mock/file.####.rat"
+
+        seq = image_sequence.ImageSequence("/mock/file.4444.rat")
+        seq.padding_style = "#"
+        self.assertEqual(expected_result, seq.path)
+
+    def test_set_padding_style_copy(self):
+        expected_result = "/mock/file.@@@@.rat"
+
+        seq = image_sequence.ImageSequence("/mock/file.4444.rat", "@")
+        new_seq = copy.copy(seq)
+
+        self.assertEqual(expected_result, new_seq.path)
+
     def test_format_with_padding_style(self):
         seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
         expected_result1 = "/mock/file_name.###.exr"
@@ -239,3 +266,29 @@ class TestImageSequence(unittest.TestCase):
             expected_result_path,
             seq.path
         )
+
+    def test_set_custom_frame_token(self):
+        expected_result = "/mock/path/file.<UDIM>.exr"
+        seq = image_sequence.ImageSequence("/mock/path/file.1001.exr")
+        seq.set_custom_frame_token("<UDIM>")
+
+        self.assertEqual(expected_result, seq.path)
+
+    def test_abstract_path_representation_010(self):
+        expected_result = "/mock/file_name.$FRAME.exr"
+        seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
+
+        self.assertEqual(
+            expected_result, seq.abstract_path_representation()
+        )
+
+    def test_find_sequence_on_disk_func(self):
+        expected_result = [
+            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1001.exr"),
+            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1002.exr")
+        ]
+
+        path = os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.#.exr")
+        seq = image_sequence.find_sequence_on_disk(path)
+
+        self.assertEqual(expected_result, seq.get_paths())

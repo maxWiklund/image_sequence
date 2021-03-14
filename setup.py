@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (C) 2021  Max Wiklund
 #
 # Licensed under the Apache License, Version 2.0 (the “License”);
@@ -21,7 +22,7 @@ REQUIRES = ["scandir"] if sys.version_info < (3, 4) else []
 setup(
     name="image_sequence",
     version=image_sequence.__version__,
-    packages=["tests", "image_sequence"],
+    packages=["image_sequence"],
     url="",
     license="Apache License 2.0",
     author="Max Wiklund",
