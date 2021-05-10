@@ -307,3 +307,19 @@ class TestImageSequence(unittest.TestCase):
         seq = image_sequence.find_sequence_on_disk(path)
 
         self.assertEqual(expected_result, seq.get_paths())
+
+    def test_start(self):
+        seq = image_sequence.ImageSequence("/mock/file.###.exr")
+        seq.frames = [103, 101, 102]
+
+        expected_result = 101
+
+        self.assertEqual(expected_result, seq.start)
+
+    def test_end(self):
+        seq = image_sequence.ImageSequence("/mock/file.%04d.exr")
+        seq.frames = [1001, 1003, 1002, 1004]
+
+        expected_result = 1004
+
+        self.assertEqual(expected_result, seq.end)

@@ -227,9 +227,11 @@ class ImageSequence(object):
 
         return bool(self.frames)
 
+    @property
     def start(self):
         return self.frames[0] if self.frames else 0
 
+    @property
     def end(self):
         return self.frames[-1] if self.frames else 0
 
