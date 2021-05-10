@@ -40,6 +40,21 @@ class TestImageSequence(unittest.TestCase):
         self.assertEqual(
             expected_result, seq.frames
         )
+    def test_new_sucess(self):
+        seq = image_sequence.ImageSequence.new("/mock/path/file.1001.exr")
+        expected_result = "/mock/path/file.%04d.exr"
+
+        self.assertEqual(
+            expected_result, seq.path
+        )
+
+    def test_new010(self):
+        seq = image_sequence.ImageSequence.new("/mock/file.1001.a#$")
+        expected_result = None
+
+        self.assertEqual(
+            expected_result, seq
+        )
 
     def test_padding010(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.@@@.exr")

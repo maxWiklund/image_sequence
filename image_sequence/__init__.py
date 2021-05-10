@@ -42,11 +42,11 @@ def find_sequence_on_disk(path):
         <ImageSequence> or None: Image sequence object with frames.
 
     """
-    if _RE_FILENAME.match(os.path.basename(path)):
-        seq = ImageSequence(path)
-        seq.find_frames_on_disk()
+    seq = ImageSequence.new(path)
+
+    if seq and (seq.find_frames_on_disk() or os.path.exists(seq.path)):
         return seq
-    return None
+    return seq
 
 
 class ImageSequence(object):
@@ -80,6 +80,12 @@ class ImageSequence(object):
             self.padding = int(self._data["token"])
         elif self._data.get("padding"):
             self.padding = len(self._data.get("padding"))
+
+    @classmethod
+    def new(cls, path, padding_style=BOOST_FORMAT_STYLE):
+        if _RE_FILENAME.match(os.path.basename(path)):
+            return cls(path, padding_style)
+        return None
 
     @property
     def padding(self):
@@ -203,19 +209,23 @@ class ImageSequence(object):
         if not self._data.get("frame"):
             return False
 
+        if not os.path.exists(self.dirname):
+            return False
+
         for path in scandir(self.dirname):
             if not path.is_file():
                 continue
 
+            element = ImageSequence.new(path.path)
+
             # Filter out file names that we can't parse.
-            if not _RE_FILENAME.match(path.name):
+            if not element:
                 continue
 
-            element = ImageSequence(path.path)
-            if self == element:
+            if self.abstract_path_representation() == element.abstract_path_representation():
                 self.merge(element)
 
-        return True
+        return bool(self.frames)
 
     def start(self):
         return self.frames[0] if self.frames else 0
@@ -251,6 +261,12 @@ class ImageSequence(object):
 
     def __str__(self):
         return self.path
+
+    def __nonzero__(self):
+        return True
+
+    def __bool__(self):
+        return True
 
     def __copy__(self):
         obj = type(self)(self.path, padding_style=self.padding_style)
