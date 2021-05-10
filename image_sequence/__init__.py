@@ -24,11 +24,11 @@ except ImportError:
 __version__ = "0.1.0"
 
 _RE_FILENAME = re.compile(
-    r"(?P<name>[\w\-\[\]]+)"   # File name.
-    r"(\.((?P<frame>\d+)|"     # Optionaly frame number.
-    r"(?:%0(?P<token>\d+)d)|"  # Optionaly frame token e.g %04d
-    r"(?P<padding>[#@]+)))?"   # Optionaly padding e.g (@@ or ###
-    r"(?P<ext>\.\w+)$"         # File extension.
+    r"(?P<name>[\w\-\[\]]+)"      # File name.
+    r"(\.((?P<frame>\d+)|"        # Optionaly frame number.
+    r"(?:%0(?P<token>\d+)d)|"     # Optionaly frame token e.g %04d
+    r"(?P<padding>[#@]+)))?"      # Optionaly padding e.g (@@ or ###
+    r"(?P<ext>\.\w+(?:\.\w+)?)$"  # File extension.
 )
 
 

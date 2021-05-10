@@ -170,6 +170,13 @@ class TestImageSequence(unittest.TestCase):
             expected_result,
             seq.ext
         )
+    def test_parse_ext(self):
+        seq = image_sequence.ImageSequence("/mock/paht/file.10.bgeo.sc", "#")
+        expected_result = ".bgeo.sc"
+        expected_path = "/mock/paht/file.##.bgeo.sc"
+
+        self.assertEqual(seq.ext, expected_result)
+        self.assertEqual(seq.path, expected_path)
 
     def test_merge(self):
         a = image_sequence.ImageSequence("/mock/file_name.@@@.exr")
