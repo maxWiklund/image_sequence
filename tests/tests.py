@@ -56,6 +56,12 @@ class TestImageSequence(unittest.TestCase):
             expected_result, seq
         )
 
+    def test_parse_udim010(self):
+        seq = image_sequence.ImageSequence.new("/mock/path/file.<UDIM>.exr")
+        expected_result = "/mock/path/file.<UDIM>.exr"
+
+        self.assertEqual(expected_result, seq.path)
+
     def test_padding010(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.@@@.exr")
         expected_result = 3
@@ -69,6 +75,12 @@ class TestImageSequence(unittest.TestCase):
         self.assertEqual(
             expected_result, seq.padding
         )
+
+    def test_padding_udim(self):
+        expected_result = 4
+        seq = image_sequence.ImageSequence("/mock/path/file.<UDIM>.tif")
+        self.assertEqual(expected_result, seq.padding)
+
 
     def test_padding030(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.#####.exr", padding_style="#")
@@ -234,6 +246,22 @@ class TestImageSequence(unittest.TestCase):
             seq.get_paths()
         )
 
+    def test_find_frames_on_disk_udim(self):
+        path = os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.<UDIM>.exr")
+        expected_path = os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.<UDIM>.exr")
+
+        seq = image_sequence.ImageSequence(path)
+
+        expected_result = [
+            os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1002.exr"),
+            os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1003.exr")
+        ]
+
+        assert seq.find_frames_on_disk() == True
+
+        self.assertEqual(expected_result, seq.get_paths())
+        self.assertEqual(expected_path, seq.path)
+
     def test_set_padding_style010(self):
         expected_result = "/mock/file.####.rat"
 
@@ -246,6 +274,15 @@ class TestImageSequence(unittest.TestCase):
         seq = image_sequence.ImageSequence("/mock/file.4444.rat")
         seq.padding_style = "#"
         self.assertEqual(expected_result, seq.path)
+
+    def test_set_padding_style030(self):
+        expected_result = "/mock/file.<UDIM>.rat"
+        expected_padding = 4
+
+        seq = image_sequence.ImageSequence("/mock/file.rat")
+        seq.padding_style = image_sequence.ImageSequence.UDIM_STYLE
+        self.assertEqual(expected_result, seq.path)
+        self.assertEqual(expected_padding, seq.padding)
 
     def test_set_padding_style_copy(self):
         expected_result = "/mock/file.@@@@.rat"
@@ -315,6 +352,17 @@ class TestImageSequence(unittest.TestCase):
 
         self.assertEqual(expected_result, seq.get_paths())
 
+    def test_find_sequence_on_disk_func_udim(self):
+        expected_result = [
+            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1001.exr"),
+            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1002.exr")
+        ]
+
+        path = os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.<UDIM>.exr")
+        seq = image_sequence.find_sequence_on_disk(path)
+
+        self.assertEqual(expected_result, seq.get_paths())
+
     def test_start(self):
         seq = image_sequence.ImageSequence("/mock/file.###.exr")
         seq.frames = [103, 101, 102]
@@ -330,3 +378,13 @@ class TestImageSequence(unittest.TestCase):
         expected_result = 1004
 
         self.assertEqual(expected_result, seq.end)
+
+    def test_optional_frame_token_format(self):
+        seq = image_sequence.ImageSequence("/mock/path/file.1001.exr")
+        expected_result = "/mock/path/file.$F.exr"
+        self.assertEqual(expected_result, seq.optional_frame_token_format("$F"))
+
+    def test_optional_frame_token_format_no_padding(self):
+        seq = image_sequence.ImageSequence("/mock/path/file.exr")
+        expected_result = "/mock/path/file.exr"
+        self.assertEqual(expected_result, seq.optional_frame_token_format("<UDIM>"))
