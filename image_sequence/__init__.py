@@ -34,13 +34,13 @@ _RE_FILENAME = re.compile(
 
 
 def find_sequence_on_disk(path):
-    """Create ImageSequence object and find coresponding frames.
+    """Create ImageSequence object and find corresponding frames.
 
     Args:
         path (str): File path.
 
     Returns:
-        <ImageSequence> or None: Image sequence object with frames.
+        ImageSequence: Image sequence object with frames or `None`.
 
     """
     seq = ImageSequence.new(path)
