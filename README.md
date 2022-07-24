@@ -1,4 +1,4 @@
-# <img src="docs/resources/header.png" width="40%" height="40%" title="ImageSequence" alt="ImageSequence">
+![image_sequence Logo](logo.png)
 Library for representing file sequences.
 
 ## Instantiate from a file path
@@ -58,7 +58,9 @@ print(seq.ext)
 
 seq.ext = ".jpg"
 print(seq.path)
-"/mock/path/newName.%04d.exr"
+"/mock/path/newName.%04d.jpg"
+
+seq.ext = ".exr"
 
 print(seq.basename)
 "newName.%04d.exr"
@@ -100,7 +102,7 @@ print(seq.format_with_padding_style("@", padding=2))
 print(seq.optional_frame_token_format("$F"))
 "/mock/path/file.$F.exr"
 
-seq.frames = []
+seq = ImageSequence("/mock/path/file.exr")
 print(seq.optional_frame_token_format("$F"))
 "/mock/path/file.exr"
 ```

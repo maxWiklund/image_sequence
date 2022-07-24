@@ -37,24 +37,19 @@ class TestImageSequence(unittest.TestCase):
         seq = image_sequence.ImageSequence("/mock/path/file_name.@@@.exr")
         seq.frames = [50, 10, 20, 30, 40, 40, 10]
         expected_result = [10, 20, 30, 40, 50]
-        self.assertEqual(
-            expected_result, seq.frames
-        )
+        self.assertEqual(expected_result, seq.frames)
+
     def test_new_sucess(self):
         seq = image_sequence.ImageSequence.new("/mock/path/file.1001.exr")
         expected_result = "/mock/path/file.%04d.exr"
 
-        self.assertEqual(
-            expected_result, seq.path
-        )
+        self.assertEqual(expected_result, seq.path)
 
     def test_new010(self):
         seq = image_sequence.ImageSequence.new("/mock/file.1001.a#$")
         expected_result = None
 
-        self.assertEqual(
-            expected_result, seq
-        )
+        self.assertEqual(expected_result, seq)
 
     def test_parse_udim010(self):
         seq = image_sequence.ImageSequence.new("/mock/path/file.<UDIM>.exr")
@@ -65,29 +60,22 @@ class TestImageSequence(unittest.TestCase):
     def test_padding010(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.@@@.exr")
         expected_result = 3
-        self.assertEqual(
-            expected_result, seq.padding
-        )
+        self.assertEqual(expected_result, seq.padding)
 
     def test_padding020(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.%02d.exr")
         expected_result = 2
-        self.assertEqual(
-            expected_result, seq.padding
-        )
+        self.assertEqual(expected_result, seq.padding)
 
     def test_padding_udim(self):
         expected_result = 4
         seq = image_sequence.ImageSequence("/mock/path/file.<UDIM>.tif")
         self.assertEqual(expected_result, seq.padding)
 
-
     def test_padding030(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.#####.exr", padding_style="#")
         expected_result = 5
-        self.assertEqual(
-            expected_result, seq.padding
-        )
+        self.assertEqual(expected_result, seq.padding)
         self.assertEqual("/mock/path/file_name.01001.exr", seq.eval_at_frame(1001))
 
     def test_no_padding(self):
@@ -102,86 +90,60 @@ class TestImageSequence(unittest.TestCase):
         b = image_sequence.ImageSequence("/mock/path/file_name.222.exr")
         expected_result = True
 
-        self.assertEqual(
-            expected_result,
-            a == b
-        )
+        self.assertEqual(expected_result, a == b)
 
     def test_not_equals010(self):
         a = image_sequence.ImageSequence("/mock/path/file_name.1101.exr")
         b = image_sequence.ImageSequence("/mock/path/file_name.exr")
         expected_result = False
 
-        self.assertEqual(
-            expected_result,
-            a == b
-        )
+        self.assertEqual(expected_result, a == b)
 
     def test_not_equals020(self):
         a = image_sequence.ImageSequence("/mock/file_name.1001.exr")
         b = image_sequence.ImageSequence("/mock/path/file_name.1001.exr")
         expected_result = False
 
-        self.assertEqual(
-            expected_result,
-            a == b
-        )
+        self.assertEqual(expected_result, a == b)
 
     def test_set_format(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.1001.exr")
         seq.set_format("{name}{ext}{frame}")
         expected_result = "file_name.exr.%04d"
 
-        self.assertEqual(
-            expected_result,
-            seq.basename
-        )
+        self.assertEqual(expected_result, seq.basename)
 
     def test_basename(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.1001.exr")
         expected_result = "file_name.%04d.exr"
 
-        self.assertEqual(
-            expected_result,
-            seq.basename
-        )
+        self.assertEqual(expected_result, seq.basename)
 
     def test_dirname(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.1001.exr")
         expected_result = "/mock/path"
 
-        self.assertEqual(
-            expected_result,
-            seq.dirname
-        )
+        self.assertEqual(expected_result, seq.dirname)
 
     def test_ext010(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.1001.exr")
         expected_result = ".exr"
 
-        self.assertEqual(
-            expected_result,
-            seq.ext
-        )
+        self.assertEqual(expected_result, seq.ext)
 
     def test_ext020(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.exr")
         expected_result = ".exr"
 
-        self.assertEqual(
-            expected_result,
-            seq.ext
-        )
+        self.assertEqual(expected_result, seq.ext)
 
     def test_set_ext(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.exr")
         seq.ext = ".jpg"
         expected_result = ".jpg"
 
-        self.assertEqual(
-            expected_result,
-            seq.ext
-        )
+        self.assertEqual(expected_result, seq.ext)
+
     def test_parse_ext(self):
         seq = image_sequence.ImageSequence("/mock/paht/file.10.bgeo.sc", "#")
         expected_result = ".bgeo.sc"
@@ -200,10 +162,7 @@ class TestImageSequence(unittest.TestCase):
 
         expected_result = [10, 20, 30, 40, 50]
 
-        self.assertEqual(
-            expected_result,
-            a.frames
-        )
+        self.assertEqual(expected_result, a.frames)
 
     def test_get_paths(self):
         seq = image_sequence.ImageSequence("/mock/file_name.@@@.exr")
@@ -211,23 +170,17 @@ class TestImageSequence(unittest.TestCase):
 
         expected_result = ["/mock/file_name.010.exr", "/mock/file_name.020.exr"]
 
-        self.assertEqual(
-            expected_result, seq.get_paths()
-        )
+        self.assertEqual(expected_result, seq.get_paths())
 
     def test_eval_at_frame010(self):
         seq = image_sequence.ImageSequence("/mock/file_name.%04d.exr")
         expected_result = "/mock/file_name.9999.exr"
-        self.assertEqual(
-            expected_result, seq.eval_at_frame(9999)
-        )
+        self.assertEqual(expected_result, seq.eval_at_frame(9999))
 
     def test_eval_at_frame020(self):
         seq = image_sequence.ImageSequence("/mock/file_name.exr")
         expected_result = "/mock/file_name.exr"
-        self.assertEqual(
-            expected_result, seq.eval_at_frame(9999)
-        )
+        self.assertEqual(expected_result, seq.eval_at_frame(9999))
 
     def test_find_frames_on_disk(self):
         path = os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.%04d.exr")
@@ -236,15 +189,12 @@ class TestImageSequence(unittest.TestCase):
 
         expected_result = [
             os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1002.exr"),
-            os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1003.exr")
+            os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1003.exr"),
         ]
 
         assert seq.find_frames_on_disk() == True
 
-        self.assertEqual(
-            expected_result,
-            seq.get_paths()
-        )
+        self.assertEqual(expected_result, seq.get_paths())
 
     def test_find_frames_on_disk_udim(self):
         path = os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.<UDIM>.exr")
@@ -254,7 +204,7 @@ class TestImageSequence(unittest.TestCase):
 
         expected_result = [
             os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1002.exr"),
-            os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1003.exr")
+            os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1003.exr"),
         ]
 
         assert seq.find_frames_on_disk() == True
@@ -298,17 +248,11 @@ class TestImageSequence(unittest.TestCase):
         expected_result2 = "/mock/file_name.@@@.exr"
         expected_result3 = "/mock/file_name.*.exr"
 
-        self.assertEqual(
-            expected_result1, seq.format_with_padding_style("#")
-        )
+        self.assertEqual(expected_result1, seq.format_with_padding_style("#"))
 
-        self.assertEqual(
-            expected_result2, seq.format_with_padding_style("@")
-        )
+        self.assertEqual(expected_result2, seq.format_with_padding_style("@"))
 
-        self.assertEqual(
-            expected_result3, seq.format_with_padding_style("*", padding=1)
-        )
+        self.assertEqual(expected_result3, seq.format_with_padding_style("*", padding=1))
 
     def test_name(self):
         seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
@@ -317,14 +261,8 @@ class TestImageSequence(unittest.TestCase):
         expected_result_path = "/mock/new_file_name.%03d.exr"
         expected_result_name = "new_file_name"
 
-        self.assertEqual(
-            expected_result_name,
-            seq.name
-        )
-        self.assertEqual(
-            expected_result_path,
-            seq.path
-        )
+        self.assertEqual(expected_result_name, seq.name)
+        self.assertEqual(expected_result_path, seq.path)
 
     def test_set_custom_frame_token(self):
         expected_result = "/mock/path/file.<UDIM>.exr"
@@ -337,14 +275,12 @@ class TestImageSequence(unittest.TestCase):
         expected_result = "/mock/file_name.$FRAME.exr"
         seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
 
-        self.assertEqual(
-            expected_result, seq.abstract_path_representation()
-        )
+        self.assertEqual(expected_result, seq.abstract_path_representation())
 
     def test_find_sequence_on_disk_func(self):
         expected_result = [
             os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1001.exr"),
-            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1002.exr")
+            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1002.exr"),
         ]
 
         path = os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.#.exr")
@@ -355,7 +291,7 @@ class TestImageSequence(unittest.TestCase):
     def test_find_sequence_on_disk_func_udim(self):
         expected_result = [
             os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1001.exr"),
-            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1002.exr")
+            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1002.exr"),
         ]
 
         path = os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.<UDIM>.exr")

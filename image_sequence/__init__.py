@@ -23,6 +23,7 @@ except ImportError:
 
 __version__ = "0.1.0"
 
+# fmt: off
 _RE_FILENAME = re.compile(
     r"(?P<name>[\w\-\[\]]+)"      # File name.
     r"(\.((?P<frame>\d+)|"        # Optional frame number.
@@ -31,6 +32,7 @@ _RE_FILENAME = re.compile(
     r"(?P<padding>[#@]+)))?"      # Optional padding e.g @@ or ###
     r"(?P<ext>\.\w+(?:\.\w+)?)$"  # File extension.
 )
+# fmt: on
 
 
 def find_sequence_on_disk(path):
@@ -60,6 +62,7 @@ class ImageSequence(object):
         True
 
     """
+
     BOOST_FORMAT_STYLE = "%"
     UDIM_STYLE = "<UDIM>"
 
@@ -353,9 +356,6 @@ class ImageSequence(object):
     def __len__(self):
         return len(self.frames)
 
-    def __repr__(self):
-        return self.path
-
     def __str__(self):
         return self.path
 
@@ -370,3 +370,4 @@ class ImageSequence(object):
         return obj
 
     __nonzero__ = __bool__
+    __repr__ = __str__
