@@ -333,6 +333,15 @@ class ImageSequence(object):
         """int: Last frame in sequence."""
         return self.frames[-1] if self.frames else 0
 
+    def endswith(self, arg):
+        """Check if sequence path endswith arg.
+
+        Args:
+            arg (str, tuple(str)): String or tuple to check with.
+
+        """
+        return self.path.endswith(arg)
+
     def abstract_path_representation(self):
         """str: File path without frame padding."""
         return self.path.replace(self._data["frame"], ".$FRAME")

@@ -324,3 +324,9 @@ class TestImageSequence(unittest.TestCase):
         seq = image_sequence.ImageSequence("/mock/path/file.exr")
         expected_result = "/mock/path/file.exr"
         self.assertEqual(expected_result, seq.optional_frame_token_format("<UDIM>"))
+
+    def test_endswith(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.102.exr")
+        self.assertTrue(seq.endswith(".exr"))
+        self.assertTrue(seq.endswith((".png", ".exr")))
+        self.assertFalse(seq.endswith(".png"))
