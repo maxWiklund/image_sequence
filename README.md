@@ -1,6 +1,12 @@
 ![image_sequence Logo](logo.png)
 Library for representing file sequences.
 
+## Install
+```shell
+pip install image_sequence
+
+```
+
 ## Instantiate from a file path
 ```python
 from image_sequence import ImageSequence

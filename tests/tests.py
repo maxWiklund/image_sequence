@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (C) 2021  Max Wiklund
 #
 # Licensed under the Apache License, Version 2.0 (the “License”);
@@ -13,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+import decimal
 import unittest
 import os
 
@@ -20,7 +20,6 @@ try:
     from unittest import mock
 except ImportError:
     import mock
-
 
 import image_sequence
 
@@ -31,31 +30,35 @@ def mock_join(*args):
     return "/".join(args)
 
 
+class MockFile:
+    def __init__(self, path):
+        self.path = path
+        self.is_file = lambda: True
+
+
 @mock.patch("image_sequence.os.path.join", mock_join)
 class TestImageSequence(unittest.TestCase):
+    def test_parse_double_file_extension(self):
+        seq = image_sequence.ImageSequence("/mock/geo_cache1.@@@@.bgeo.sc")
+        expected_result = "/mock/geo_cache1.####.bgeo.sc"
+
+        self.assertEqual(expected_result, seq.path)
+
+    def test_raise_exception(self):
+        with self.assertRaises(image_sequence.ImageSequenceParseError) as context:
+            image_sequence.ImageSequence("")
+        self.assertEqual('Input path ""', str(context.exception))
+
+    def test_invalid_input_type(self):
+        with self.assertRaises(AssertionError) as context:
+            image_sequence.ImageSequence(MockFile(""))
+        self.assertEqual("'path' expected str, not MockFile", str(context.exception))
+
     def test_add_frames(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.@@@.exr")
         seq.frames = [50, 10, 20, 30, 40, 40, 10]
         expected_result = [10, 20, 30, 40, 50]
         self.assertEqual(expected_result, seq.frames)
-
-    def test_new_sucess(self):
-        seq = image_sequence.ImageSequence.new("/mock/path/file.1001.exr")
-        expected_result = "/mock/path/file.%04d.exr"
-
-        self.assertEqual(expected_result, seq.path)
-
-    def test_new010(self):
-        seq = image_sequence.ImageSequence.new("/mock/file.1001.a#$")
-        expected_result = None
-
-        self.assertEqual(expected_result, seq)
-
-    def test_parse_udim010(self):
-        seq = image_sequence.ImageSequence.new("/mock/path/file.<UDIM>.exr")
-        expected_result = "/mock/path/file.<UDIM>.exr"
-
-        self.assertEqual(expected_result, seq.path)
 
     def test_padding010(self):
         seq = image_sequence.ImageSequence("/mock/path/file_name.@@@.exr")
@@ -67,35 +70,37 @@ class TestImageSequence(unittest.TestCase):
         expected_result = 2
         self.assertEqual(expected_result, seq.padding)
 
-    def test_padding_udim(self):
-        expected_result = 4
-        seq = image_sequence.ImageSequence("/mock/path/file.<UDIM>.tif")
-        self.assertEqual(expected_result, seq.padding)
-
     def test_padding030(self):
-        seq = image_sequence.ImageSequence("/mock/path/file_name.#####.exr", padding_style="#")
+        seq = image_sequence.ImageSequence("/mock/path/file_name.#####.exr")
         expected_result = 5
         self.assertEqual(expected_result, seq.padding)
         self.assertEqual("/mock/path/file_name.01001.exr", seq.eval_at_frame(1001))
 
-    def test_no_padding(self):
+    def test_eval_at_frame_no_frame(self):
+        seq = image_sequence.ImageSequence("/mock/path/file_name.exr")
         expected_result = "/mock/path/file_name.exr"
-        seq = image_sequence.ImageSequence("/mock/path/file_name.#####.exr")
-        seq.padding = 0
 
-        self.assertEqual(expected_result, seq.path)
+        self.assertEqual(expected_result, seq.eval_at_frame(1001))
+
+    def test_eval_at_frame(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.####.exr")
+        expected_result = "/mock/file_name.1010.exr"
+
+        self.assertEqual(expected_result, seq.eval_at_frame(1010))
+
+    def test_eval_at_frame_float(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.####.exr")
+        expected_result = "/mock/file_name.1010.0000045.exr"
+
+        self.assertEqual(
+            expected_result, seq.eval_at_frame(decimal.Decimal("1010.0000045"))
+        )
+        self.assertEqual("/mock/file_name.0010.21.exr", seq.eval_at_frame(10.21))
 
     def test_equals(self):
         a = image_sequence.ImageSequence("/mock/path/file_name.101.exr")
         b = image_sequence.ImageSequence("/mock/path/file_name.222.exr")
         expected_result = True
-
-        self.assertEqual(expected_result, a == b)
-
-    def test_not_equals010(self):
-        a = image_sequence.ImageSequence("/mock/path/file_name.1101.exr")
-        b = image_sequence.ImageSequence("/mock/path/file_name.exr")
-        expected_result = False
 
         self.assertEqual(expected_result, a == b)
 
@@ -107,14 +112,14 @@ class TestImageSequence(unittest.TestCase):
         self.assertEqual(expected_result, a == b)
 
     def test_set_format(self):
-        seq = image_sequence.ImageSequence("/mock/path/file_name.1001.exr")
+        seq = image_sequence.ImageSequence("/mock/path/file_name.1001.exr", "%")
         seq.set_format("{name}{ext}{frame}")
         expected_result = "file_name.exr.%04d"
 
         self.assertEqual(expected_result, seq.basename)
 
     def test_basename(self):
-        seq = image_sequence.ImageSequence("/mock/path/file_name.1001.exr")
+        seq = image_sequence.ImageSequence("/mock/path/file_name.1001.exr", "%")
         expected_result = "file_name.%04d.exr"
 
         self.assertEqual(expected_result, seq.basename)
@@ -144,14 +149,6 @@ class TestImageSequence(unittest.TestCase):
 
         self.assertEqual(expected_result, seq.ext)
 
-    def test_parse_ext(self):
-        seq = image_sequence.ImageSequence("/mock/paht/file.10.bgeo.sc", "#")
-        expected_result = ".bgeo.sc"
-        expected_path = "/mock/paht/file.##.bgeo.sc"
-
-        self.assertEqual(seq.ext, expected_result)
-        self.assertEqual(seq.path, expected_path)
-
     def test_merge(self):
         a = image_sequence.ImageSequence("/mock/file_name.@@@.exr")
         a.frames = [10, 20, 30]
@@ -171,6 +168,17 @@ class TestImageSequence(unittest.TestCase):
         expected_result = ["/mock/file_name.010.exr", "/mock/file_name.020.exr"]
 
         self.assertEqual(expected_result, seq.get_paths())
+
+    def test_get_paths_with_offset(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.@@@.exr")
+        seq.frames = [10.05, 20.00004]
+
+        expected_result = [
+            "/mock/file_name.025.05.exr",
+            "/mock/file_name.035.00004.exr",
+        ]
+
+        self.assertEqual(expected_result, seq.get_paths(offset=15))
 
     def test_eval_at_frame010(self):
         seq = image_sequence.ImageSequence("/mock/file_name.%04d.exr")
@@ -196,52 +204,6 @@ class TestImageSequence(unittest.TestCase):
 
         self.assertEqual(expected_result, seq.get_paths())
 
-    def test_find_frames_on_disk_udim(self):
-        path = os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.<UDIM>.exr")
-        expected_path = os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.<UDIM>.exr")
-
-        seq = image_sequence.ImageSequence(path)
-
-        expected_result = [
-            os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1002.exr"),
-            os.path.join(TEXTRUES_ROOT, "char_dog_BUMP.1003.exr"),
-        ]
-
-        assert seq.find_frames_on_disk() == True
-
-        self.assertEqual(expected_result, seq.get_paths())
-        self.assertEqual(expected_path, seq.path)
-
-    def test_set_padding_style010(self):
-        expected_result = "/mock/file.####.rat"
-
-        seq = image_sequence.ImageSequence("/mock/file.4444.rat", padding_style="#")
-        self.assertEqual(expected_result, seq.path)
-
-    def test_set_padding_style020(self):
-        expected_result = "/mock/file.####.rat"
-
-        seq = image_sequence.ImageSequence("/mock/file.4444.rat")
-        seq.padding_style = "#"
-        self.assertEqual(expected_result, seq.path)
-
-    def test_set_padding_style030(self):
-        expected_result = "/mock/file.<UDIM>.rat"
-        expected_padding = 4
-
-        seq = image_sequence.ImageSequence("/mock/file.rat")
-        seq.padding_style = image_sequence.ImageSequence.UDIM_STYLE
-        self.assertEqual(expected_result, seq.path)
-        self.assertEqual(expected_padding, seq.padding)
-
-    def test_set_padding_style_copy(self):
-        expected_result = "/mock/file.@@@@.rat"
-
-        seq = image_sequence.ImageSequence("/mock/file.4444.rat", "@")
-        new_seq = copy.copy(seq)
-
-        self.assertEqual(expected_result, new_seq.path)
-
     def test_format_with_padding_style(self):
         seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
         expected_result1 = "/mock/file_name.###.exr"
@@ -252,10 +214,32 @@ class TestImageSequence(unittest.TestCase):
 
         self.assertEqual(expected_result2, seq.format_with_padding_style("@"))
 
-        self.assertEqual(expected_result3, seq.format_with_padding_style("*", padding=1))
+        self.assertEqual(
+            expected_result3, seq.format_with_padding_style("*", padding=1)
+        )
+
+    def test_format_with_padding_style_mov(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.mov")
+        expected_result = "/mock/file_name.mov"
+        self.assertEqual(expected_result, seq.format_with_padding_style("#"))
+
+    def test_optional_format_with_padding_style(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
+        expected_result1 = "/mock/file_name.ABC.exr"
+
+        self.assertEqual(
+            expected_result1, seq.optional_format_with_padding_style("ABC")
+        )
+
+        seq = image_sequence.ImageSequence("/mock/file_name.exr")
+        expected_result2 = "/mock/file_name.exr"
+
+        self.assertEqual(
+            expected_result2, seq.optional_format_with_padding_style("ABC")
+        )
 
     def test_name(self):
-        seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
+        seq = image_sequence.ImageSequence("/mock/file_name.101.exr", "%")
         seq.name = "new_file_name"
 
         expected_result_path = "/mock/new_file_name.%03d.exr"
@@ -264,69 +248,291 @@ class TestImageSequence(unittest.TestCase):
         self.assertEqual(expected_result_name, seq.name)
         self.assertEqual(expected_result_path, seq.path)
 
-    def test_set_custom_frame_token(self):
-        expected_result = "/mock/path/file.<UDIM>.exr"
-        seq = image_sequence.ImageSequence("/mock/path/file.1001.exr")
-        seq.set_custom_frame_token("<UDIM>")
+    def test_set_frame_token(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
+        seq.set_frame_token("$FRAME")
+
+        expected_result = "/mock/file_name.$FRAME.exr"
 
         self.assertEqual(expected_result, seq.path)
 
-    def test_abstract_path_representation_010(self):
-        expected_result = "/mock/file_name.$FRAME.exr"
+    def test_houdini_frame_token(self):
+        seq = image_sequence.ImageSequence("/mock/job_name_19234/v1/box.$F.bgeo.sc")
+        expected_result = "/mock/job_name_19234/v1/box.#.bgeo.sc"
+
+        self.assertEqual(expected_result, seq.path)
+
+    def test_set_frame_token_none(self):
+        seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
+        seq.set_frame_token("")
+        expected_result = "/mock/file_name.exr"
+        self.assertEqual(expected_result, seq.path)
+
+    @mock.patch("image_sequence.os.path.exists", return_value=True)
+    @mock.patch("image_sequence.os.scandir")
+    def test_find_sequence_on_disk(self, scandir_mock, m):
+        scandir_mock.return_value = [
+            MockFile("/mock/file.999.exr"),
+            MockFile("/mock/file.1001.exr"),
+        ]
+        seq = image_sequence.find_sequence_on_disk("/mock/file.#########.exr")
+
+        expected_result_path = "/mock/file.###.exr"
+        expected_result_frames = [999, 1001]
+
+        self.assertEqual(expected_result_path, seq.path)
+        self.assertEqual(expected_result_frames, seq.frames)
+
+    def test_find_sequence_on_disk_failed(self):
+        seq = image_sequence.find_sequence_on_disk("/mock/file.#.exr")
+        expected_result = None
+        self.assertEqual(expected_result, seq)
+
+    @mock.patch("image_sequence.os.path.exists", return_value=True)
+    @mock.patch("image_sequence.os.scandir")
+    def test_find_sequence_on_disk_set_padding_style(self, scandir_mock, m):
+        scandir_mock.return_value = [
+            MockFile("/mock/file.999.exr"),
+            MockFile("/mock/file.1001.exr"),
+        ]
+        seq = image_sequence.find_sequence_on_disk(
+            "/mock/file.#.exr", padding_style="@"
+        )
+
+        expected_result_frames = [999, 1001]
+        self.assertEqual(3, seq.padding)
+
+        self.assertEqual(expected_result_frames, seq.frames)
+
+    def test__getitem(self):
         seq = image_sequence.ImageSequence("/mock/file_name.101.exr")
 
-        self.assertEqual(expected_result, seq.abstract_path_representation())
+        expected_result = "/mock/file_name.101.exr"
+        self.assertEqual(expected_result, seq[0])
 
-    def test_find_sequence_on_disk_func(self):
-        expected_result = [
-            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1001.exr"),
-            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1002.exr"),
-        ]
+    @mock.patch("image_sequence.os.path.exists", return_value=True)
+    @mock.patch("image_sequence.os.scandir")
+    def test_find_sequence_on_disk_single_file(self, scandir_mock, m):
+        scandir_mock.return_value = []
 
-        path = os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.#.exr")
-        seq = image_sequence.find_sequence_on_disk(path)
+        expected_result_path = "/mock/file.abc"
 
-        self.assertEqual(expected_result, seq.get_paths())
+        seq = image_sequence.find_sequence_on_disk("/mock/file.abc")
 
-    def test_find_sequence_on_disk_func_udim(self):
-        expected_result = [
-            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1001.exr"),
-            os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.1002.exr"),
-        ]
+        self.assertEqual(expected_result_path, seq.path)
 
-        path = os.path.join(TEXTRUES_ROOT, "char_dog_DIFFUSE.<UDIM>.exr")
-        seq = image_sequence.find_sequence_on_disk(path)
+    def test_constructor_hash_padding(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/file.09.exr", image_sequence.ImageSequence.HASH
+        )
 
-        self.assertEqual(expected_result, seq.get_paths())
+        expected_result1 = "/mock/file.##.exr"
+        expected_result2 = "/mock/file.09.exr"
 
-    def test_start(self):
-        seq = image_sequence.ImageSequence("/mock/file.###.exr")
-        seq.frames = [103, 101, 102]
+        self.assertEqual(expected_result1, seq.path)
+        self.assertEqual(expected_result2, seq.eval_at_frame(9))
 
-        expected_result = 101
+    def test_constructor_boost_padding(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/file.09.exr", image_sequence.ImageSequence.BOOST
+        )
 
-        self.assertEqual(expected_result, seq.start)
+        expected_result = "/mock/file.%02d.exr"
 
-    def test_end(self):
-        seq = image_sequence.ImageSequence("/mock/file.%04d.exr")
-        seq.frames = [1001, 1003, 1002, 1004]
+        self.assertEqual(expected_result, seq.path)
 
-        expected_result = 1004
+    def test_constructor_at_padding(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/file.090.exr", image_sequence.ImageSequence.AT_SIGN
+        )
 
-        self.assertEqual(expected_result, seq.end)
+        expected_result = "/mock/file.@@@.exr"
 
-    def test_optional_frame_token_format(self):
-        seq = image_sequence.ImageSequence("/mock/path/file.1001.exr")
-        expected_result = "/mock/path/file.$F.exr"
-        self.assertEqual(expected_result, seq.optional_frame_token_format("$F"))
+        self.assertEqual(expected_result, seq.path)
 
-    def test_optional_frame_token_format_no_padding(self):
-        seq = image_sequence.ImageSequence("/mock/path/file.exr")
-        expected_result = "/mock/path/file.exr"
-        self.assertEqual(expected_result, seq.optional_frame_token_format("<UDIM>"))
+    def test_set_padding_hash(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/file.exr", image_sequence.ImageSequence.HASH
+        )
+        seq.padding = 5
+
+        expected_result = "/mock/file.#####.exr"
+
+        self.assertEqual(expected_result, seq.path)
+
+    def test_set_padding_style(self):
+        seq = image_sequence.ImageSequence("/mock/file.101.exr", padding_style=">")
+        expected_result = "/mock/file.>>>.exr"
+
+        self.assertEqual(expected_result, seq.path)
+
+    def test_create_success(self):
+        seq = image_sequence.ImageSequence.new("/mock/file.101.exr", padding_style="%")
+        expected_result = "/mock/file.%03d.exr"
+
+        self.assertEqual(expected_result, seq.path)
+
+    def test_create_padding_style_success(self):
+        seq = image_sequence.ImageSequence.new("/mock/file.101.exr", padding_style="@")
+        expected_result = "/mock/file.@@@.exr"
+
+        self.assertEqual(expected_result, seq.path)
+
+    def test_copy(self):
+        a = image_sequence.ImageSequence("/mock/file.1001.exr")
+        b = copy.copy(a)
+        a.name = "hello"
+
+        self.assertNotEqual(a.name, b.name)
+
+    def test_copy_float_seq(self):
+        a = image_sequence.ImageSequence("/mock/name.10.25.png")
+        b = copy.copy(a)
+
+        expected_result = ["/mock/name.10.25.png"]
+        self.assertEqual(expected_result, b.get_paths())
 
     def test_endswith(self):
-        seq = image_sequence.ImageSequence("/mock/file_name.102.exr")
-        self.assertTrue(seq.endswith(".exr"))
-        self.assertTrue(seq.endswith((".png", ".exr")))
-        self.assertFalse(seq.endswith(".png"))
+        seq = image_sequence.ImageSequence("/mock/file.1001.png")
+        self.assertTrue(seq.endswith(".png"))
+        self.assertFalse(seq.endswith((".mov", ".rat", ".exr")))
+
+    def test_floating_frames(self):
+        seq = image_sequence.ImageSequence("/mock/v41/rotatingTeapot.1009.70.bgeo.sc")
+        self.assertEqual([decimal.Decimal("1009.70")], seq.frames)
+
+        self.assertEqual(".####", seq.get_frame_token())
+
+        self.assertEqual(["/mock/v41/rotatingTeapot.1009.70.bgeo.sc"], seq.get_paths())
+
+        seq = image_sequence.ImageSequence("/mock/path/skin_bgeo_v023.####.bgeo.sc")
+        self.assertEqual(
+            "/mock/path/skin_bgeo_v023.0017.90.bgeo.sc",
+            seq.eval_at_frame(decimal.Decimal("17.90")),
+        )
+
+    def test_add_floating_frame_range(self):
+        seq = image_sequence.ImageSequence("/mock/file.%04d.png")
+        seq.frames = [1001.7, 1002.6]
+        expected_result = ["/mock/file.1001.7.png", "/mock/file.1002.6.png"]
+        self.assertEqual(expected_result, seq.get_paths())
+
+    def test_large_floating_frame(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/char_collision.1029.4000000000001.bgeo.sc"
+        )
+        expected_result = ["/mock/char_collision.1029.4000000000001.bgeo.sc"]
+        self.assertEqual(expected_result, seq.get_paths())
+
+    def test_has_float_frames(self):
+        seq = image_sequence.ImageSequence("/mock/path/file.103.78.bgeo.sc")
+        self.assertTrue(seq.has_float_frames())
+        seq = image_sequence.ImageSequence("/mock/path/file.1030.bgeo.sc")
+        self.assertFalse(seq.has_float_frames())
+
+    def test_append_frames(self):
+        seq = image_sequence.ImageSequence("/mock/path/file.103.78.bgeo.sc")
+        seq.frames.append(103.67)
+
+        expected_result = [
+            103.67,
+            103.78,
+        ]  # We expect that the float values are sorted.
+
+        self.assertEqual(list(map(str, expected_result)), list(map(str, seq.frames)))
+
+    def test_format_mixed_frames(self):
+        seq = image_sequence.ImageSequence("/mock/path/file.##.bgeo.sc")
+        seq.frames = [10, 10.6]
+
+        expected_result = ["/mock/path/file.10.bgeo.sc", "/mock/path/file.10.6.bgeo.sc"]
+        self.assertEqual(expected_result, seq.get_paths())
+
+    def test_hidden_files(self):
+        seq = image_sequence.ImageSequence("/mock/.assetName.mov")
+        expected_result = "/mock/.assetName.mov"
+        self.assertEqual(expected_result, seq.path)
+        self.assertEqual(".assetName", seq.name)
+        self.assertEqual(".mov", seq.ext)
+
+    def test_flame_frame_exp(self):
+        expected_path = "/mock/TVC_BSS_sh0010_FG01_v001.####.exr"
+        expected_frames = [1001, 1089]
+        seq = image_sequence.ImageSequence(
+            "/mock/TVC_BSS_sh0010_FG01_v001.[1001-1089].exr",
+        )
+
+        self.assertEqual(expected_path, seq.path)
+        self.assertEqual(expected_frames, seq.frames)
+        self.assertEqual(seq.padding_style, image_sequence.ImageSequence.HASH)
+
+    def test_flame_padding_style(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/file.###.exr", padding_style=image_sequence.ImageSequence.FLAME
+        )
+        seq.frames = [101, 189]
+        expected_result = "/mock/file.[101-189].exr"
+        self.assertEqual(expected_result, seq.path)
+
+        # Check what happens when you don't have a frame range.
+        expected_result = "/mock/file.[0-0].exr"
+        seq.frames = []
+        self.assertEqual(expected_result, seq.path)
+
+    def test_houdini_frame_exp(self):
+        expected_path = "/mock/TVC_BSS_sh0010_FG01_v001.#.exr"
+        seq = image_sequence.ImageSequence(
+            "/mock/TVC_BSS_sh0010_FG01_v001.$F.exr",
+        )
+
+        self.assertEqual(expected_path, seq.path)
+        self.assertEqual(seq.padding_style, image_sequence.ImageSequence.HASH)
+
+    def test_houdini_padding_style(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/file.###.exr", padding_style=image_sequence.ImageSequence.HOUDINI
+        )
+        expected_result = "/mock/file.$F3.exr"
+        self.assertEqual(expected_result, seq.path)
+
+    def test_houdini_ff_padding_style(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/path/file.$FF.vdb",
+            padding_style=image_sequence.ImageSequence.HOUDINI_FF,
+        )
+        expected_result = "/mock/path/file.10.4.vdb"
+        expected_format = "/mock/path/file.$FF.vdb"
+
+        self.assertEqual(expected_result, seq.eval_at_frame(10.4))
+        self.assertEqual(expected_format, seq.path)
+
+    def test_udim_padding(self):
+        seq = image_sequence.ImageSequence(
+            "/mock/path/file.1001.exr", padding_style=image_sequence.ImageSequence.UDIM
+        )
+        self.assertEqual("/mock/path/file.<UDIM>.exr", seq.path)
+
+        seq = image_sequence.ImageSequence("/mock/path/file.<UDIM>.exr")
+        self.assertEqual("/mock/path/file.####.exr", seq.path)
+        self.assertEqual([], seq.frames)
+
+    def test_support_special_characters(self):
+        seq = image_sequence.ImageSequence("/mo1&(*%/path/%&^$%$£!_[30-40].[10-20].exr")
+        expected_result = "%&^$%$£!_[30-40].##.exr"
+        self.assertEqual(expected_result, seq.basename)
+        self.assertEqual([10, 20], seq.frames)
+
+    def test_seq_exists_no_frames(self):
+        seq = image_sequence.ImageSequence(f"{TEXTRUES_ROOT}/test_maya_file.ma")
+        self.assertTrue(seq.exists())
+
+    def test_seq_exists_frames(self):
+        seq = image_sequence.ImageSequence(f"{TEXTRUES_ROOT}/char_dog_BUMP.#.exr")
+        self.assertTrue(seq.exists())
+
+    def test_missing_frames(self):
+        seq = image_sequence.ImageSequence(os.path.join(TEXTRUES_ROOT, "file.#.png"))
+        seq.find_frames_on_disk()
+
+        expected_result = [12]
+        self.assertEqual(expected_result, seq.missing_frames)
